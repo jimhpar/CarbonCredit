@@ -1,0 +1,23 @@
+# Secrets & Credentials (NEVER commit)
+.env
+.env.*
+!.env.example
+backend/.env
+backend/gee-key.json
+*-key.json
+*.pem
+
+# Python
+backend/.venv/
+__pycache__/
+*.pyc
+
+# Node / Next.js
+frontend/node_modules/
+frontend/.next/
+frontend/out/
+*.tsbuildinfo
+
+# OS
+.DS_Store
+Thumbs.db
