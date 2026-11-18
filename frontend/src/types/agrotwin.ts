@@ -50,8 +50,73 @@ export interface PilotFarm {
   farmer_count: number;
   area_acres: number;
   practice: PracticeType;
+  carbon_rank?: number;
   center: [number, number];
   polygon: [number, number][];
   iot: IoTData;
   analysis: HybridAnalysis;
+}
+
+export type UserRole = "farmer" | "field_agent" | "b2b_partner" | "admin";
+
+export interface UserProfile {
+  id: string;
+  full_name: string;
+  role: UserRole;
+  phone: string;
+  bkash_number?: string | null;
+  district: string;
+  farm_id?: string | null;
+}
+
+export interface NotificationItem {
+  id: string;
+  farm_id: string;
+  channel: "SMS" | "IVR_VOICE" | "IN_APP";
+  message_bn: string;
+  status: string;
+  sent_at: string;
+}
+
+export interface PayoutItem {
+  id: string;
+  farm_id: string;
+  farmer_name: string;
+  bkash_number: string;
+  tco2e_share: number;
+  amount_bdt: number;
+  provider: "BKASH" | "NAGAD";
+  status: "PENDING" | "PAID";
+  created_at: string;
+}
+
+export interface TimeSeriesPoint {
+  label: string;
+  ndvi: number;
+  ndwi: number;
+  ndsi: number;
+  water_cm: number;
+}
+
+export interface FinanceCompany {
+  id: string;
+  name: string;
+  company_type: "MFI" | "BANK" | "AGRI_INSURER";
+  interest_rate_pct: number;
+  max_loan_bdt: number;
+  active: boolean;
+}
+
+export interface LoanApplication {
+  id: string;
+  farm_id: string;
+  farmer_name: string;
+  phone: string;
+  finance_company_id: string;
+  finance_company_name: string;
+  requested_amount_bdt: number;
+  credit_score: number;
+  purpose: string;
+  status: "PENDING" | "APPROVED" | "REJECTED";
+  created_at: string;
 }

@@ -100,3 +100,71 @@ values
   ('farm-bogura-01', 'ESP32-BOG-01', 54.0, 0.6, -7.5, 4.02),
   ('farm-satkhira-01', 'ESP32-SAT-04', 38.5, 4.8, 1.5, 3.79),
   ('farm-rajshahi-01', 'ESP32-RAJ-02', 29.0, 0.9, -12.0, 3.91);
+
+-- --- Step 1-3 Additions: Users, Notifications, Payouts ---
+
+create table if not exists public.profiles (
+  id text primary key,
+  full_name text not null,
+  role text not null check (role in ('farmer', 'field_agent', 'b2b_partner', 'admin')),
+  phone text not null,
+  password_hash text,
+  bkash_number text,
+  district text not null,
+  farm_id text references public.farms(id) on delete set null,
+  created_at timestamptz not null default now()
+);
+
+create table if not exists public.finance_companies (
+  id text primary key,
+  name text not null,
+  company_type text not null check (company_type in ('MFI', 'BANK', 'AGRI_INSURER')),
+  interest_rate_pct double precision not null,
+  max_loan_bdt double precision not null,
+  active boolean not null default true,
+  created_at timestamptz not null default now()
+);
+
+create table if not exists public.loan_applications (
+  id text primary key,
+  farm_id text not null references public.farms(id) on delete cascade,
+  farmer_name text not null,
+  phone text not null,
+  finance_company_id text not null,
+  finance_company_name text not null,
+  requested_amount_bdt double precision not null,
+  credit_score integer not null,
+  purpose text not null,
+  status text not null default 'PENDING' check (status in ('PENDING', 'APPROVED', 'REJECTED')),
+  created_at timestamptz not null default now()
+);
+
+create table if not exists public.notifications (
+  id text primary key,
+  farm_id text not null references public.farms(id) on delete cascade,
+  channel text not null check (channel in ('SMS', 'IVR_VOICE', 'IN_APP')),
+  message_bn text not null,
+  status text not null default 'SENT',
+  sent_at timestamptz not null default now()
+);
+
+create table if not exists public.payouts (
+  id text primary key,
+  farm_id text not null references public.farms(id) on delete cascade,
+  farmer_name text not null,
+  bkash_number text not null,
+  tco2e_share double precision not null,
+  amount_bdt double precision not null,
+  provider text not null default 'BKASH',
+  status text not null default 'PENDING' check (status in ('PENDING', 'PAID')),
+  created_at timestamptz not null default now()
+);
+
+insert into public.profiles (id, full_name, role, phone, bkash_number, district, farm_id)
+values
+  ('usr-admin-01', 'Zim (Platform Admin)', 'admin', '01700000001', null, 'Dhaka', null),
+  ('usr-agent-01', 'Rafiqul Islam (Field Agent)', 'field_agent', '01711000002', '01711000002', 'Bogura', 'farm-bogura-01'),
+  ('usr-farmer-01', 'Abdul Karim (Farmer)', 'farmer', '01812000003', '01812000003', 'Bogura', 'farm-bogura-01'),
+  ('usr-farmer-02', 'Mizanur Rahman (Farmer)', 'farmer', '01913000004', '01913000004', 'Satkhira', 'farm-satkhira-01'),
+  ('usr-b2b-01', 'GreenBank MFI Partner', 'b2b_partner', '01755000005', null, 'Dhaka', null)
+on conflict (id) do nothing;

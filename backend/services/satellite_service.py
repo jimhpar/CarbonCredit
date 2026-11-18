@@ -1,4 +1,7 @@
+import hashlib
+import json
 import os
+import time
 from datetime import datetime, timedelta, timezone
 from typing import Optional
 import httpx
@@ -13,13 +16,15 @@ def _to_geojson_ring(polygon_lat_lng: list[list[float]]) -> list[list[float]]:
 
 
 class SatelliteService:
-    """Fetches NDVI, NDWI, NDSI from Google Earth Engine or Sentinel Hub, with local fallback."""
+    """Fetches NDVI, NDWI, NDSI from Google Earth Engine or Sentinel Hub, with 5-min TTL cache."""
 
     def __init__(self) -> None:
         self.gee_ready = False
         self.sentinel_hub_ready = bool(
             os.getenv("SENTINELHUB_CLIENT_ID") and os.getenv("SENTINELHUB_CLIENT_SECRET")
         )
+        self._cache: dict[str, tuple[float, dict]] = {}
+        self._cache_ttl_sec = 300.0
         self._init_gee()
 
     def _init_gee(self) -> None:
@@ -62,14 +67,21 @@ class SatelliteService:
         salinity_dsm: float,
         water_level_cm: float,
     ) -> dict:
+        cache_key = hashlib.md5(json.dumps(polygon_lat_lng).encode()).hexdigest()
+        cached = self._cache.get(cache_key)
+        if cached and (time.time() - cached[0]) < self._cache_ttl_sec:
+            return cached[1]
+
         if self.gee_ready:
             gee_result = self._fetch_from_gee(polygon_lat_lng)
             if gee_result is not None:
+                self._cache[cache_key] = (time.time(), gee_result)
                 return gee_result
 
         if self.sentinel_hub_ready:
             sh_result = self._fetch_from_sentinel_hub(polygon_lat_lng)
             if sh_result is not None:
+                self._cache[cache_key] = (time.time(), sh_result)
                 return sh_result
 
         # Fallback: IoT-calibrated index simulation
